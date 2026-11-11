@@ -1,1 +1,121 @@
 
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#102b46">
+<title>EasyFlow AI</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;font-family:Arial,sans-serif;
+ background:#f2f6fa;color:#172b42;
+}
+header{
+ background:linear-gradient(135deg,#102b46,#176b72);
+ color:white;padding:25px 18px;text-align:center;
+}
+header h1{margin:0;font-size:30px}
+header p{color:#d6e9ed;margin-bottom:0}
+main{max-width:750px;margin:25px auto;padding:0 15px}
+.card{
+ background:white;padding:20px;border-radius:16px;
+ margin-bottom:18px;box-shadow:0 4px 18px #18334b12;
+}
+h2{font-size:20px;margin-top:0}
+textarea{
+ width:100%;min-height:125px;padding:14px;
+ border:1px solid #cbd8e3;border-radius:10px;
+ font-size:16px;resize:vertical;line-height:1.6;
+}
+button{
+ border:0;border-radius:10px;padding:14px;
+ font-size:16px;font-weight:bold;cursor:pointer;
+}
+.primary{background:#147d78;color:white;width:100%;margin-top:12px}
+.example{
+ background:#eaf4f3;color:#176b72;
+ padding:10px;border-radius:8px;margin:7px 0;
+ cursor:pointer;font-size:14px;
+}
+#result{display:none}
+.step{
+ background:#f1f6fa;padding:12px;
+ border-radius:9px;margin:9px 0;
+}
+.status{color:#b36a17;font-size:13px}
+footer{text-align:center;color:#738397;padding:20px;font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+ <h1>EasyFlow AI</h1>
+ <p>الأتمتة للجميع — فقط أخبرنا ماذا تريد</p>
+</header>
+
+<main>
+ <section class="card">
+  <h2>ماذا تريد أن تنجز؟</h2>
+  <p>اكتب طلبك بلغتك الطبيعية، وسنحوّله إلى خطوات عمل واضحة.</p>
+
+  <textarea id="request" placeholder="مثلاً: أريد تنظيم فواتيري واستخراج المبالغ والتواريخ ووضعها في جدول..."></textarea>
+
+  <button class="primary" onclick="analyze()">حلّل طلبي</button>
+ </section>
+
+ <section class="card">
+  <h2>أمثلة جاهزة</h2>
+  <div class="example" onclick="example(0)">📄 استخراج المعلومات من ملفات PDF</div>
+  <div class="example" onclick="example(1)">📊 تنظيم الفواتير في جدول</div>
+  <div class="example" onclick="example(2)">📧 تنظيم رسائل العملاء</div>
+  <div class="example" onclick="example(3)">📁 ترتيب الملفات وتصنيفها</div>
+ </section>
+
+ <section class="card" id="result">
+  <h2>خطة تنفيذ طلبك</h2>
+  <p class="status">نسخة تجريبية: هذه خطة محاكاة وليست عملية تنفيذ حقيقية.</p>
+  <div id="steps"></div>
+ </section>
+</main>
+
+<footer>EasyFlow AI © 2026 — Simple Automation for Everyone</footer>
+
+<script>
+const examples=[
+ "أريد استخراج المعلومات المهمة من ملفات PDF.",
+ "أريد تنظيم الفواتير واستخراج المبالغ والتواريخ ووضعها في جدول.",
+ "أريد تصنيف رسائل العملاء حسب نوع الطلب.",
+ "أريد ترتيب الملفات وتصنيفها حسب محتواها."
+];
+
+function example(i){
+ document.getElementById("request").value=examples[i];
+ analyze();
+}
+
+function analyze(){
+ const request=document.getElementById("request").value.trim();
+ if(!request){
+  alert("اكتب ما تريد إنجازه أولاً.");
+  return;
+ }
+
+ const tasks=[
+  "فهم طلب المستخدم وتحديد النتيجة المطلوبة.",
+  "تحديد الملفات أو البيانات اللازمة للعمل.",
+  "إعداد خطوات الأتمتة المناسبة.",
+  "التحقق من النتائج قبل اعتمادها."
+ ];
+
+ document.getElementById("steps").innerHTML=
+ tasks.map((s,i)=>`<div class="step"><strong>${i+1}.</strong> ${s}</div>`).join("");
+
+ document.getElementById("result").style.display="block";
+ document.getElementById("result").scrollIntoView({behavior:"smooth"});
+}
+</script>
+</body>
+</html>
+
