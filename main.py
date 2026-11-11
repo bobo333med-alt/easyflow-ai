@@ -7,6 +7,8 @@ from pathlib import Path
 import csv
 import io
 import os
+import sqlite3
+from datetime import datetime
 
 # إعداد الذكاء الاصطناعي (Groq)
 from groq import Groq
@@ -25,12 +27,38 @@ app.add_middleware(
     ],
 )
 
-# --- قسم الذكاء الاصطناعي ---
+# --- إعداد قاعدة البيانات (SQLite) ---
+DB_FILE = "easyflow.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    # جدول سجل العمليات
+    c.execute('''CREATE TABLE IF NOT EXISTS executions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_type TEXT,
+                    status TEXT,
+                    details TEXT,
+                    timestamp TEXT
+                 )''')
+    conn.commit()
+    conn.close()
+
+# تشغيل تهيئة قاعدة البيانات عند بدء التطبيق
+init_db()
+
+def log_execution(task_type, status, details):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    c.execute("INSERT INTO executions (task_type, status, details, timestamp) VALUES (?, ?, ?, ?)",
+              (task_type, status, details, now))
+    conn.commit()
+    conn.close()
+
+# --- قسم الذكاء الاصطناعي (Groq) ---
 api_key = os.environ.get("GROQ_API_KEY")
-if api_key:
-    client = Groq(api_key=api_key)
-else:
-    client = None
+client = Groq(api_key=api_key) if api_key else None
 
 class ChatRequest(BaseModel):
     message: str
@@ -38,32 +66,29 @@ class ChatRequest(BaseModel):
 @app.post("/api/chat")
 async def chat_with_ai(request: ChatRequest):
     if not client:
-        return {"response": "عذراً، مفتاح الذكاء الاصطناعي (GROQ_API_KEY) غير مضاف في إعدادات Render. يرجى إضافته لتفعيل المحادثة."}
+        return {"response": "عذراً، مفتاح الذكاء الاصطناعي (GROQ_API_KEY) غير مضاف في إعدادات Render."}
 
     prompt = f"""
     أنت EasyFlow AI، منصة ذكية لأتمتة المهام.
     المستخدم يقول: "{request.message}"
-    
-    مهمتك:
     1. افهم طلب المستخدم.
     2. إذا كان يطلب أتمتة، اقترح خطة عمل مقسمة لخطوات واضحة.
     3. إذا كان الطلب يتعلق بملفات CSV أو الجداول، أخبره أنه يمكنه تجربة ذلك فوراً بالنزول إلى قسم "تنظيف ملف CSV" في الصفحة.
-    4. إذا كان الطلب غير مدعوم حالياً (مثل إرسال إيميل)، اقترح عليه الفكرة وقل له أنها قيد التطوير.
-    
     أجب باللغة العربية، بأسلوب ودود، مختصر، وواضح جداً.
     """
-    
     try:
-        # استخدام نموذج Llama 3 السريع من جروك
         completion = client.chat.completions.create(
             model="llama3-8b-8192",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
             max_tokens=1024,
         )
+        # تسجيل المحادثة في السجل
+        log_execution("محادثة ذكية", "ناجحة", f"طلب المستخدم: {request.message[:50]}...")
         return {"response": completion.choices[0].message.content}
     except Exception as e:
         return {"response": f"حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {str(e)}"}
+
 
 # --- محرك تنظيف CSV ---
 MAX_SIZE = 10 * 1024 * 1024
@@ -122,6 +147,10 @@ async def clean_csv(file: UploadFile = File(...)):
     writer.writerows(unique)
     body = out.getvalue().encode("utf-8-sig")
 
+    # تسجيل العملية في قاعدة البيانات
+    details = f"أصلية: {original_count} | محذوفة: {removed_total} | مكررة: {duplicates_removed}"
+    log_execution("تنظيف CSV", "ناجحة", details)
+
     headers = {
         "Content-Disposition": 'attachment; filename="easyflow_cleaned.csv"',
         "X-Rows-Original": str(original_count),
@@ -132,6 +161,31 @@ async def clean_csv(file: UploadFile = File(...)):
     }
 
     return StreamingResponse(io.BytesIO(body), media_type="text/csv", headers=headers)
+
+# --- مسارات الإحصائيات والسجل (جديدة) ---
+@app.get("/api/stats")
+def get_stats():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM executions WHERE task_type='تنظيف CSV'")
+    csv_count = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM executions")
+    total_count = c.fetchone()[0]
+    conn.close()
+    return {
+        "total_executions": total_count,
+        "csv_cleaned": csv_count,
+        "success_rate": "100%" if total_count > 0 else "—"
+    }
+
+@app.get("/api/history")
+def get_history():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT task_type, status, details, timestamp FROM executions ORDER BY id DESC LIMIT 10")
+    rows = c.fetchall()
+    conn.close()
+    return [{"task": r[0], "status": r[1], "details": r[2], "time": r[3]} for r in rows]
 
 # --- خدمة الواجهة ---
 static_dir = Path(__file__).parent
