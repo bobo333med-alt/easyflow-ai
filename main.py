@@ -1,142 +1,105 @@
-
-
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 import csv
 import io
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 
-app = FastAPI(
-    title="EasyFlow AI Engine",
-    description="Simple automation engine for everyone",
-    version="0.2.0"
-)
+app = FastAPI(title="EasyFlow AI", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=[
         "X-Rows-Original",
         "X-Rows-Output",
         "X-Rows-Removed",
-        "X-Duplicates-Removed"
-    ]
+        "X-Duplicates-Removed",
+        "X-Rows-Empty-Removed",
+    ],
 )
 
-@app.get("/")
-def home():
-    return {
-        "name": "EasyFlow AI",
-        "version": "0.2.0",
-        "status": "running",
-        "message": "Automation engine is ready"
-    }
+MAX_SIZE = 10 * 1024 * 1024  # 10 ميغابايت
+
 
 @app.get("/health")
 def health():
     return {"status": "healthy"}
 
+
 @app.post("/api/csv/clean")
 async def clean_csv(file: UploadFile = File(...)):
+    # 1) التحقق من الصيغة
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="الملف يجب أن يكون بصيغة CSV")
 
-    if not file.filename.lower().endswith(".csv"):
-        raise HTTPException(
-            status_code=400,
-            detail="Please upload a CSV file"
-        )
+    raw = await file.read()
 
-    content = await file.read()
+    # 2) التحقق من الحجم
+    if len(raw) == 0:
+        raise HTTPException(status_code=400, detail="الملف فارغ")
+    if len(raw) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="حجم الملف يتجاوز 10 ميغابايت")
 
-    if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(
-            status_code=413,
-            detail="Maximum file size is 10 MB"
-        )
-
-    if not content:
-        raise HTTPException(
-            status_code=400,
-            detail="The uploaded file is empty"
-        )
-
-    text = None
-
-    for encoding in ["utf-8-sig", "cp1256", "latin-1"]:
-        try:
-            text = content.decode(encoding)
-            break
-        except UnicodeDecodeError:
-            continue
-
+    # 3) قراءة المحتوى مع دعم الترميزات الشائعة
     try:
-        reader = csv.reader(io.StringIO(text))
-        rows = list(reader)
-    except csv.Error:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid CSV file"
-        )
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            text = raw.decode("latin-1")
+        except Exception:
+            raise HTTPException(status_code=400, detail="تعذر قراءة ترميز الملف")
 
+    rows = list(csv.reader(io.StringIO(text)))
     if not rows:
-        raise HTTPException(
-            status_code=400,
-            detail="No data found"
-        )
+        raise HTTPException(status_code=400, detail="لا توجد بيانات في الملف")
 
-    headers = [cell.strip() for cell in rows[0]]
+    header = rows[0]
+    data = rows[1:]
+    original_count = len(data)
 
-    if not any(headers):
-        raise HTTPException(
-            status_code=400,
-            detail="CSV header is missing"
-        )
+    # 4) إزالة الصفوف الفارغة
+    non_empty = [r for r in data if any(cell.strip() for cell in r)]
+    empty_removed = original_count - len(non_empty)
 
-    original_count = max(0, len(rows) - 1)
-    cleaned_rows = []
+    # 5) إزالة الصفوف المكررة
     seen = set()
+    unique = []
     duplicates_removed = 0
-    empty_rows_removed = 0
-
-    for row in rows[1:]:
-
-        cleaned = [cell.strip() for cell in row]
-
-        if not any(cleaned):
-            empty_rows_removed += 1
-            continue
-
-        key = tuple(cleaned)
-
+    for r in non_empty:
+        key = tuple(cell.strip() for cell in r)
         if key in seen:
             duplicates_removed += 1
-            continue
+        else:
+            seen.add(key)
+            unique.append(r)
 
-        seen.add(key)
-        cleaned_rows.append(cleaned)
+    output_count = len(unique)
+    removed_total = original_count - output_count
 
-    output = io.StringIO()
-    writer = csv.writer(output)
+    # 6) بناء ملف CSV النظيف
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(header)
+    writer.writerows(unique)
+    body = out.getvalue().encode("utf-8-sig")
 
-    writer.writerow(headers)
-    writer.writerows(cleaned_rows)
+    headers = {
+        "Content-Disposition": 'attachment; filename="easyflow_cleaned.csv"',
+        "X-Rows-Original": str(original_count),
+        "X-Rows-Output": str(output_count),
+        "X-Rows-Removed": str(removed_total),
+        "X-Rows-Empty-Removed": str(empty_removed),
+        "X-Duplicates-Removed": str(duplicates_removed),
+    }
 
-    result = output.getvalue().encode("utf-8-sig")
+    return StreamingResponse(io.BytesIO(body), media_type="text/csv", headers=headers)
 
-    total_removed = (
-        empty_rows_removed + duplicates_removed
-    )
 
-    return StreamingResponse(
-        io.BytesIO(result),
-        media_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition":
-                'attachment; filename="easyflow_cleaned.csv"',
-            "X-Rows-Original": str(original_count),
-            "X-Rows-Output": str(len(cleaned_rows)),
-            "X-Rows-Removed": str(total_removed),
-            "X-Duplicates-Removed": str(duplicates_removed)
-        }
-    )
+# 7) خدمة الواجهة من نفس الخادم (يجب أن يكون هذا آخر سطر في الملف)
+static_dir = Path(__file__).parent
+app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
