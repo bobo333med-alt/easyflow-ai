@@ -33,7 +33,6 @@ DB_FILE = "easyflow.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    # جدول سجل العمليات
     c.execute('''CREATE TABLE IF NOT EXISTS executions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     task_type TEXT,
@@ -44,7 +43,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# تشغيل تهيئة قاعدة البيانات عند بدء التطبيق
 init_db()
 
 def log_execution(task_type, status, details):
@@ -83,14 +81,13 @@ async def chat_with_ai(request: ChatRequest):
             temperature=0.7,
             max_tokens=1024,
         )
-        # تسجيل المحادثة في السجل
         log_execution("محادثة ذكية", "ناجحة", f"طلب المستخدم: {request.message[:50]}...")
         return {"response": completion.choices[0].message.content}
     except Exception as e:
         return {"response": f"حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {str(e)}"}
 
 
-# --- محرك تنظيف CSV ---
+# --- محرك تنظيف CSV (تم تحديثه ليكون ذكياً) ---
 MAX_SIZE = 10 * 1024 * 1024
 
 @app.get("/health")
@@ -108,15 +105,28 @@ async def clean_csv(file: UploadFile = File(...)):
     if len(raw) > MAX_SIZE:
         raise HTTPException(status_code=400, detail="حجم الملف يتجاوز 10 ميغابايت")
 
-    try:
-        text = raw.decode("utf-8-sig")
-    except UnicodeDecodeError:
+    # 1. اكتشاف الترميز (Encoding) تلقائياً ليدعم الفرنسية والعربية
+    text = None
+    for enc in ["utf-8-sig", "utf-8", "cp1252", "latin-1"]:
         try:
-            text = raw.decode("latin-1")
-        except Exception:
-            raise HTTPException(status_code=400, detail="تعذر قراءة ترميز الملف")
+            text = raw.decode(enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    
+    if text is None:
+        raise HTTPException(status_code=400, detail="تعذر قراءة ترميز الملف")
 
-    rows = list(csv.reader(io.StringIO(text)))
+    # 2. اكتشاف الفاصلة تلقائياً (فاصلة عادية أو منقوطة) ليدعم إعدادات Excel الفرنسية
+    try:
+        # نستخدم أول 1024 حرف لاكتشاف الفاصل
+        dialect = csv.Sniffer().sniff(text[:1024])
+        delimiter = dialect.delimiter
+    except csv.Error:
+        # إذا فشل الاكتشاف، نستخدم الفاصلة المنقوطة كافتراضي (لأن جهازك فرنسي)
+        delimiter = ';' if ';' in text[:1024] else ','
+
+    rows = list(csv.reader(io.StringIO(text), delimiter=delimiter))
     if not rows:
         raise HTTPException(status_code=400, detail="لا توجد بيانات في الملف")
 
@@ -141,13 +151,13 @@ async def clean_csv(file: UploadFile = File(...)):
     output_count = len(unique)
     removed_total = original_count - output_count
 
+    # نعيد بناء الملف بالفاصلة العادية أو المنقوطة حسب ما اكتشفناه
     out = io.StringIO()
-    writer = csv.writer(out)
+    writer = csv.writer(out, delimiter=delimiter)
     writer.writerow(header)
     writer.writerows(unique)
     body = out.getvalue().encode("utf-8-sig")
 
-    # تسجيل العملية في قاعدة البيانات
     details = f"أصلية: {original_count} | محذوفة: {removed_total} | مكررة: {duplicates_removed}"
     log_execution("تنظيف CSV", "ناجحة", details)
 
@@ -162,7 +172,7 @@ async def clean_csv(file: UploadFile = File(...)):
 
     return StreamingResponse(io.BytesIO(body), media_type="text/csv", headers=headers)
 
-# --- مسارات الإحصائيات والسجل (جديدة) ---
+# --- مسارات الإحصائيات والسجل ---
 @app.get("/api/stats")
 def get_stats():
     conn = sqlite3.connect(DB_FILE)
