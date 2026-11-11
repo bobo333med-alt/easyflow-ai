@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -8,60 +7,73 @@
 <title>EasyFlow AI</title>
 <style>
 *{box-sizing:border-box}
-body{
- margin:0;font-family:Arial,sans-serif;
- background:#f2f6fa;color:#172b42;
-}
-header{
- background:linear-gradient(135deg,#102b46,#176b72);
- color:white;padding:25px 18px;text-align:center;
-}
+body{margin:0;font-family:Arial,sans-serif;background:#f2f6fa;color:#172b42;line-height:1.6}
+header{background:linear-gradient(135deg,#102b46,#176b72);color:#fff;padding:28px 18px;text-align:center}
 header h1{margin:0;font-size:30px}
-header p{color:#d6e9ed;margin-bottom:0}
-main{max-width:750px;margin:25px auto;padding:0 15px}
-.card{
- background:white;padding:20px;border-radius:16px;
- margin-bottom:18px;box-shadow:0 4px 18px #18334b12;
-}
-h2{font-size:20px;margin-top:0}
-textarea{
- width:100%;min-height:125px;padding:14px;
- border:1px solid #cbd8e3;border-radius:10px;
- font-size:16px;resize:vertical;line-height:1.6;
-}
-button{
- border:0;border-radius:10px;padding:14px;
- font-size:16px;font-weight:bold;cursor:pointer;
-}
-.primary{background:#147d78;color:white;width:100%;margin-top:12px}
-.example{
- background:#eaf4f3;color:#176b72;
- padding:10px;border-radius:8px;margin:7px 0;
- cursor:pointer;font-size:14px;
-}
+header p{color:#d6e9ed;margin:6px 0 0}
+main{max-width:900px;margin:25px auto;padding:0 15px}
+.card{background:#fff;padding:22px;border-radius:16px;margin-bottom:18px;box-shadow:0 4px 18px #18334b12}
+h2{font-size:20px;margin-top:0;margin-bottom:10px}
+p.muted{color:#5b6b7e;font-size:14px;margin:4px 0 14px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+.stat{background:#fff;border-radius:14px;padding:16px;text-align:center;box-shadow:0 4px 18px #18334b12}
+.stat .v{font-size:24px;font-weight:bold;color:#147d78}
+.stat .l{font-size:13px;color:#738397;margin-top:4px}
+
+textarea{width:100%;min-height:120px;padding:14px;border:1px solid #cbd8e3;border-radius:10px;font-size:16px;resize:vertical;line-height:1.6;font-family:inherit}
+button{border:0;border-radius:10px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:inherit}
+.primary{background:#147d78;color:#fff;width:100%;margin-top:12px}
+.primary:hover{background:#0f6b67}
+.primary:disabled{background:#9bc7c3;cursor:not-allowed}
+.example{background:#eaf4f3;color:#176b72;padding:10px 12px;border-radius:8px;margin:7px 0;cursor:pointer;font-size:14px}
+.example:hover{background:#dbeceb}
+
 #result{display:none}
-.step{
- background:#f1f6fa;padding:12px;
- border-radius:9px;margin:9px 0;
-}
-.status{color:#b36a17;font-size:13px}
+.step{background:#f1f6fa;padding:12px;border-radius:9px;margin:9px 0;border-right:4px solid #147d78}
+.status{color:#b36a17;font-size:13px;background:#fff7ed;padding:8px 12px;border-radius:8px;margin-bottom:12px}
+
+.upload{border:2px dashed #cbd8e3;border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color 0.2s;background:#fafcfe}
+.upload:hover{border-color:#147d78}
+.upload input{display:none}
+.upload .big{font-size:17px;font-weight:bold;color:#102b46}
+.upload .hint{color:#738397;font-size:13px;margin-top:6px}
+
+.report{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:16px}
+.ritem{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center}
+.ritem .n{font-size:22px;font-weight:bold}
+.ritem .n.g{color:#147d78}
+.ritem .n.r{color:#c2410c}
+.ritem .n.b{color:#102b46}
+.ritem .l{font-size:12px;color:#738397;margin-top:4px}
+
+.dl{display:inline-block;margin-top:14px;padding:12px 22px;background:#147d78;color:#fff;border-radius:10px;text-decoration:none;font-weight:bold;font-size:15px}
+.dl:hover{background:#0f6b67}
+
+.ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;padding:12px 16px;border-radius:10px;margin-top:14px;font-size:14px}
+.err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:10px;margin-top:14px;font-size:14px}
+
 footer{text-align:center;color:#738397;padding:20px;font-size:13px}
 </style>
 </head>
 <body>
-
 <header>
  <h1>EasyFlow AI</h1>
  <p>الأتمتة للجميع — فقط أخبرنا ماذا تريد</p>
 </header>
-
 <main>
+
+ <div class="stats">
+  <div class="stat"><div class="v">0</div><div class="l">أتمتة نشطة</div></div>
+  <div class="stat"><div class="v">0</div><div class="l">عمليات منفذة</div></div>
+  <div class="stat"><div class="v">0</div><div class="l">ملفات معالجة</div></div>
+  <div class="stat"><div class="v">—</div><div class="l">نسبة النجاح</div></div>
+ </div>
+
  <section class="card">
   <h2>ماذا تريد أن تنجز؟</h2>
-  <p>اكتب طلبك بلغتك الطبيعية، وسنحوّله إلى خطوات عمل واضحة.</p>
-
+  <p class="muted">اكتب طلبك بلغتك الطبيعية، وسنحوّله إلى خطوات عمل واضحة.</p>
   <textarea id="request" placeholder="مثلاً: أريد تنظيم فواتيري واستخراج المبالغ والتواريخ ووضعها في جدول..."></textarea>
-
   <button class="primary" onclick="analyze()">حلّل طلبي</button>
  </section>
 
@@ -75,14 +87,33 @@ footer{text-align:center;color:#738397;padding:20px;font-size:13px}
 
  <section class="card" id="result">
   <h2>خطة تنفيذ طلبك</h2>
-  <p class="status">نسخة تجريبية: هذه خطة محاكاة وليست عملية تنفيذ حقيقية.</p>
+  <p class="status">ملاحظة: هذه خطة محاكاة توضيحية — التنفيذ الفعلي بالذكاء الاصطناعي قيد التطوير. لكن تنظيف CSV أدناه يعمل فعلياً الآن.</p>
   <div id="steps"></div>
  </section>
-</main>
 
+ <section class="card">
+  <h2>⚙️ تنظيف ملف CSV (عملية حقيقية)</h2>
+  <p class="muted">ارفع ملف CSV، وسيقوم المحرك بإزالة الصفوف الفارغة والمكررة، ثم يعيد لك ملفاً نظيفاً مع تقرير بالنتائج.</p>
+
+  <div class="upload" onclick="document.getElementById('csvFile').click()">
+   <input type="file" id="csvFile" accept=".csv" onchange="onFile()">
+   <div class="big">اختر ملف CSV أو اسحبه هنا</div>
+   <div class="hint" id="fname">لم يتم اختيار ملف بعد — الحد الأقصى 10 ميغابايت</div>
+  </div>
+
+  <button class="primary" id="runBtn" onclick="runClean()" disabled>تنظيف الملف</button>
+
+  <div id="status"></div>
+  <div id="report"></div>
+ </section>
+
+</main>
 <footer>EasyFlow AI © 2026 — Simple Automation for Everyone</footer>
 
 <script>
+const API_BASE = "http://127.0.0.1:8000";
+
+/* ===== تحليل الطلب (محاكاة) ===== */
 const examples=[
  "أريد استخراج المعلومات المهمة من ملفات PDF.",
  "أريد تنظيم الفواتير واستخراج المبالغ والتواريخ ووضعها في جدول.",
@@ -96,11 +127,8 @@ function example(i){
 }
 
 function analyze(){
- const request=document.getElementById("request").value.trim();
- if(!request){
-  alert("اكتب ما تريد إنجازه أولاً.");
-  return;
- }
+ const req=document.getElementById("request").value.trim();
+ if(!req){ alert("اكتب ما تريد إنجازه أولاً."); return; }
 
  const tasks=[
   "فهم طلب المستخدم وتحديد النتيجة المطلوبة.",
@@ -109,13 +137,84 @@ function analyze(){
   "التحقق من النتائج قبل اعتمادها."
  ];
 
- document.getElementById("steps").innerHTML=
- tasks.map((s,i)=>`<div class="step"><strong>${i+1}.</strong> ${s}</div>`).join("");
+ document.getElementById("steps").innerHTML =
+  tasks.map((s,i)=>`<div class="step"><strong>${i+1}.</strong> ${s}</div>`).join("");
 
- document.getElementById("result").style.display="block";
- document.getElementById("result").scrollIntoView({behavior:"smooth"});
+ const r=document.getElementById("result");
+ r.style.display="block";
+ r.scrollIntoView({behavior:"smooth"});
+}
+
+/* ===== تنظيف CSV (حقيقي) ===== */
+let pickedFile=null;
+const fileEl=document.getElementById("csvFile");
+const fnameEl=document.getElementById("fname");
+const runBtn=document.getElementById("runBtn");
+const statusEl=document.getElementById("status");
+const reportEl=document.getElementById("report");
+
+function onFile(){
+ pickedFile=fileEl.files[0]||null;
+ statusEl.innerHTML="";
+ reportEl.innerHTML="";
+ if(pickedFile){
+  fnameEl.textContent="الملف المختار: "+pickedFile.name+" ("+(pickedFile.size/1024).toFixed(1)+" كيلوبايت)";
+  runBtn.disabled=false;
+ }else{
+  fnameEl.textContent="لم يتم اختيار ملف بعد — الحد الأقصى 10 ميغابايت";
+  runBtn.disabled=true;
+ }
+}
+
+async function runClean(){
+ if(!pickedFile) return;
+ runBtn.disabled=true;
+ runBtn.textContent="جاري المعالجة...";
+ statusEl.innerHTML="";
+ reportEl.innerHTML="";
+
+ const fd=new FormData();
+ fd.append("file",pickedFile);
+
+ try{
+  const res=await fetch(API_BASE+"/api/csv/clean",{method:"POST",body:fd});
+
+  if(!res.ok){
+   const e=await res.json().catch(()=>({}));
+   throw new Error(e.detail || ("فشل الخادم (رمز "+res.status+")"));
+  }
+
+  const rowsOrig=res.headers.get("X-Rows-Original")||"—";
+  const rowsOut =res.headers.get("X-Rows-Output")||"—";
+  const rowsRem =res.headers.get("X-Rows-Removed")||"—";
+  const dups    =res.headers.get("X-Duplicates-Removed")||"—";
+
+  const blob=await res.blob();
+  const url=URL.createObjectURL(blob);
+
+  statusEl.innerHTML='<div class="ok">✅ تمت معالجة الملف بنجاح. الملف النظيف جاهز للتنزيل.</div>';
+  reportEl.innerHTML=`
+   <div class="report">
+    <div class="ritem"><div class="n b">${rowsOrig}</div><div class="l">صفوف أصلية</div></div>
+    <div class="ritem"><div class="n g">${rowsOut}</div><div class="l">صفوف بعد التنظيف</div></div>
+    <div class="ritem"><div class="n r">${rowsRem}</div><div class="l">صفوف محذوفة</div></div>
+    <div class="ritem"><div class="n r">${dups}</div><div class="l">صفوف مكررة</div></div>
+   </div>
+   <a class="dl" href="${url}" download="easyflow_cleaned.csv">⬇ تحميل الملف النظيف</a>
+  `;
+ }catch(err){
+  statusEl.innerHTML='<div class="err">❌ '+escapeHtml(err.message)+'</div>';
+ }finally{
+  runBtn.disabled=false;
+  runBtn.textContent="تنظيف الملف";
+ }
+}
+
+function escapeHtml(s){
+ const d=document.createElement("div");
+ d.textContent=s;
+ return d.innerHTML;
 }
 </script>
 </body>
 </html>
-
